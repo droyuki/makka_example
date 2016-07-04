@@ -1,0 +1,16 @@
+{
+  "jobs": [
+    {
+      "className": "com.oring.smartcity.test.jobs.JobA",
+      "properties": {
+        "topic":"exampleTopic",
+        "key":"value"
+      }
+    },
+    {
+      "className": "com.oring.smartcity.test.jobs.JobB",
+      "properties": {
+      }
+    }
+  ]
+}
