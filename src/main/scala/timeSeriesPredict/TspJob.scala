@@ -1,6 +1,7 @@
 package timeSeriesPredict
 
 import com.oring.smartcity.makka.Job
+import mongodb.MongoCasbah
 
 import play.api.libs.json.Json
 
@@ -24,9 +25,15 @@ class TspJob extends Job {
     val user = ((request \ "user")).as[String]
     val requestId = ((request \ "requestId")).as[String]
 
-//    val tsp = new Tsp()
-//    val fundsPrice = new MongoCasbah().query(portfolio_fundname, "fund20160414")
-//    tspRequestMap.put(requestId, tsp)
+    val fundsPrice = new MongoCasbah().query(portfolio_fundname, "fund20160414", "2010/01/01", "2014/12/31")
+    fundsPrice.par.map(e => {
+      val ts = e.toArray
+      val tsp = new Tsp()
+      val d = tsp.unitRootTest(ts) // diff number
+      val pacfAcf = tsp.estimateAcfPacf(ts, d) // pacf and acf
+      val models = tsp.createModel(pacfAcf, ts)
+    })
+
 
 
   }
