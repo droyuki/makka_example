@@ -1,10 +1,5 @@
 package timeSeriesPredict
 
-import java.util
-
-import _root_.other.UnivariateModel
-import _root_.other.UnivariateModel
-import _root_.other.UnivariateModel
 import org.rosuda.REngine.{RList, REXP, REXPMismatchException, REngineException}
 import org.rosuda.REngine.Rserve.{RserveException, RConnection}
 
@@ -56,10 +51,10 @@ class Tsp {
     var j = 0;
     val acfNum: Int = acfPacf(0)
     var armaParameters = List.empty
-    for(i <- 1 to 1+acfNum ) {
-      for(j <- acfNum+1 to acfPacf.length) {
+    for (i <- 1 to 1 + acfNum) {
+      for (j <- acfNum + 1 to acfPacf.length) {
         val armaParameter: ArmaParameter = new ArmaParameter(acfPacf(i), d, acfPacf(j))
-        armaParameters::=armaParameter
+        armaParameters ::= armaParameter
       }
     }
 
@@ -69,12 +64,40 @@ class Tsp {
 
   def createModel(pacfAcf: List[ArmaParameter], ts: Array[Double]): Unit = {
     val models = pacfAcf.par.map(e => {
-      val arimaModel = createArima(e, ts)
+      val arimaModel = createArima(e, ts)(0)
       val garchModel = createGarch(e, ts)
+      (arimaModel, garchModel)
     })
+
+    var univariateModels: List[UnivariateModel] = List.empty
+    val modelsFlatten = models.map(e => {
+      univariateModels ::= e._1
+      univariateModels ::= e._2
+    })
+    val finalArray = Array.empty[Array[Double]]
+    val modelsLength = univariateModels.length
+    val forecastLength = univariateModels(0).getForecast.length
+    for (index <- 0 to forecastLength - 1) {
+      var biggest = Double.MinValue
+      var smallest = Double.MaxValue
+      var sum = 0.0
+      for (m <- 0 to modelsLength - 1) {
+        sum = sum + univariateModels(m).getForecast()(index)
+        if (univariateModels(m).getForecast()(index) > biggest) {
+          biggest = univariateModels(m).getForecast()(index)
+        }
+
+        if (univariateModels(m).getForecast()(index) < smallest) {
+          smallest = univariateModels(m).getForecast()(index)
+        }
+      }
+      finalArray :+ Array(smallest, biggest, sum)
+    }
+
+
   }
 
-  def createArima(aramaParameter: ArmaParameter,  ts: Array[Double]): Unit = {
+  def createArima(aramaParameter: ArmaParameter, ts: Array[Double]): List[UnivariateModel] = {
     val rConnection = new RConnection()
     val tsValue: Array[Double] = ts
     val arrP = Array(aramaParameter.getPacf)
@@ -114,7 +137,7 @@ class Tsp {
                 univariateModel.setMape(modelList.at("mape").asDouble)
                 univariateModel.setPackages(modelList.at("package").asString)
                 univariateModel.setEmptyModel(false)
-                univariateModels::=univariateModel
+                univariateModels ::= univariateModel
               }
               catch {
                 case e: NullPointerException => {
@@ -124,7 +147,8 @@ class Tsp {
               }
             }
             ({
-              i += 1; i - 1
+              i += 1;
+              i - 1
             })
           }
         }
@@ -146,11 +170,11 @@ class Tsp {
       }
     }
 
-
     rConnection.close()
+    univariateModels
   }
 
-  def createGarch(aramaParameter: ArmaParameter,  ts: Array[Double]): Unit ={
+  def createGarch(aramaParameter: ArmaParameter, ts: Array[Double]): UnivariateModel = {
     val rConnection = new RConnection()
     val tsValue: Array[Double] = ts
     val arrP = Array(aramaParameter.getPacf)
@@ -187,19 +211,6 @@ class Tsp {
           univariateModel.setPackages(modelList.at("package").asString)
           univariateModel.setEmptyModel(false)
         }
-        catch {
-          case e: NullPointerException => {
-            val univariateModel: UnivariateModel = new UnivariateModel
-            univariateModels ::= univariateModel
-          }
-        }
-      }
-      else {
-        univariateModel.setRealTimeStamp(realTimeStamp)
-        univariateModel.setTimeStamp(lastTimeStamp)
-        univariateModel.setBoltId(boltId)
-        univariateModel.setTaskNum(taskNum)
-        univariateModel.setWindowSize(windowSize)
       }
     }
     catch {
@@ -214,6 +225,7 @@ class Tsp {
       }
     }
     rConnection.close()
+    univariateModel
   }
 
 }
