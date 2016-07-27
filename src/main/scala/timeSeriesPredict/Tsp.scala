@@ -10,10 +10,12 @@ import org.rosuda.REngine.Rserve.{RserveException, RConnection}
 class Tsp {
 
   def unitRootTest(ts: Array[Double]): Int = {
-    val rConnections = new RConnection()
     var d: Int = 0
+    val rConnections = new RConnection("10.211.55.3", 6311)
     try {
       rConnections.assign("ts", ts)
+      rConnections.eval("source(\"/dkShell/Rfile/univariateTimeSeriesModel.R\")")
+      rConnections.eval("print(ts)")
       d = rConnections.eval("unitRootTestADF(ts)").asInteger
     } catch {
       case e: REngineException => {
@@ -29,7 +31,8 @@ class Tsp {
   }
 
   def estimateAcfPacf(ts: Array[Double], d: Int): List[ArmaParameter] = {
-    val rConnections = new RConnection()
+    val rConnections = new RConnection("10.211.55.3", 6311)
+    rConnections.eval("source(\"/dkShell/Rfile/univariateTimeSeriesModel.R\")")
     var acfPacf: Array[Int] = new Array[Int](0)
     try {
       rConnections.assign("ts", ts)
@@ -50,9 +53,9 @@ class Tsp {
     var i = 0;
     var j = 0;
     val acfNum: Int = acfPacf(0)
-    var armaParameters = List.empty
-    for (i <- 1 to 1 + acfNum) {
-      for (j <- acfNum + 1 to acfPacf.length) {
+    var armaParameters = List.empty[ArmaParameter]
+    for (i <- 1 to acfNum) {
+      for (j <- acfNum + 1 to acfPacf.length - 1) {
         val armaParameter: ArmaParameter = new ArmaParameter(acfPacf(i), d, acfPacf(j))
         armaParameters ::= armaParameter
       }
@@ -62,19 +65,22 @@ class Tsp {
     return armaParameters
   }
 
-  def createModel(pacfAcf: List[ArmaParameter], ts: Array[Double]): Unit = {
-    val models = pacfAcf.par.map(e => {
+  def createModel(pacfAcf: List[ArmaParameter], ts: Array[Double]): List[List[Double]] = {
+    val models = pacfAcf.map(e => {
       val arimaModel = createArima(e, ts)(0)
-      val garchModel = createGarch(e, ts)
-      (arimaModel, garchModel)
+//      val garchModel = createGarch(e, ts)
+//      (arimaModel, garchModel)
+      arimaModel
     })
 
-    var univariateModels: List[UnivariateModel] = List.empty
-    val modelsFlatten = models.map(e => {
-      univariateModels ::= e._1
-      univariateModels ::= e._2
+    var univariateModelsAll: List[UnivariateModel] = List.empty
+    val modelsFlatten = models.foreach(e => {
+//      univariateModelsAll ::= e._1
+//      univariateModelsAll ::= e._2
+      univariateModelsAll ::= e
     })
-    val finalArray = Array.empty[Array[Double]]
+    var univariateModels = univariateModelsAll.filter(!_.isEmptyModel)
+    var finalArray = List.empty[List[Double]]
     val modelsLength = univariateModels.length
     val forecastLength = univariateModels(0).getForecast.length
     for (index <- 0 to forecastLength - 1) {
@@ -82,6 +88,8 @@ class Tsp {
       var smallest = Double.MaxValue
       var sum = 0.0
       for (m <- 0 to modelsLength - 1) {
+//        univariateModels(m).getForecast().foreach(aaa => print(aaa))
+
         sum = sum + univariateModels(m).getForecast()(index)
         if (univariateModels(m).getForecast()(index) > biggest) {
           biggest = univariateModels(m).getForecast()(index)
@@ -91,14 +99,18 @@ class Tsp {
           smallest = univariateModels(m).getForecast()(index)
         }
       }
-      finalArray :+ Array(smallest, biggest, sum)
+      println(s"fuck small : ${smallest}, big : ${biggest}, sum : ${sum}")
+      finalArray ::= List(smallest, biggest, sum/modelsLength)
     }
 
-
+    finalArray
   }
 
   def createArima(aramaParameter: ArmaParameter, ts: Array[Double]): List[UnivariateModel] = {
-    val rConnection = new RConnection()
+    val rConnection = new RConnection("10.211.55.3", 6311)
+    rConnection.eval("source(\"/dkShell/Rfile/univariateTimeSeriesModel.R\")")
+    rConnection.eval("source(\"/dkShell/Rfile/loadpackage.R\")")
+
     val tsValue: Array[Double] = ts
     val arrP = Array(aramaParameter.getPacf)
     val arrD = Array(aramaParameter.getD)
@@ -111,7 +123,13 @@ class Tsp {
       rConnection.assign("p", arrP)
       rConnection.assign("d", arrD)
       rConnection.assign("q", arrQ)
-      val models: REXP = rConnection.eval("createArimaModel(ts, predictData, p, d, q)")
+      rConnection.eval("print(ts)")
+      rConnection.eval("print(p)")
+      rConnection.eval("print(d)")
+      rConnection.eval("print(q)")
+
+      val models: REXP = rConnection.eval("a <- createArimaModel(ts, predictData, p, d, q)")
+      rConnection.eval("print(a)")
       val totalModelNum: Int = models.length
       if (totalModelNum > 0) {
         {
@@ -175,7 +193,10 @@ class Tsp {
   }
 
   def createGarch(aramaParameter: ArmaParameter, ts: Array[Double]): UnivariateModel = {
-    val rConnection = new RConnection()
+    val rConnection = new RConnection("10.211.55.3", 6311)
+    rConnection.eval("source(\"/dkShell/Rfile/univariateTimeSeriesModel.R\")")
+    rConnection.eval("source(\"/dkShell/Rfile/loadpackage.R\")")
+
     val tsValue: Array[Double] = ts
     val arrP = Array(aramaParameter.getPacf)
     val arrD = Array(aramaParameter.getD)
