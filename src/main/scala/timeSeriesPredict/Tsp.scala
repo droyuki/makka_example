@@ -49,7 +49,6 @@ class Tsp {
         e.printStackTrace
       }
     }
-
     var i = 0;
     var j = 0;
     val acfNum: Int = acfPacf(0)
@@ -65,7 +64,7 @@ class Tsp {
     return armaParameters
   }
 
-  def createModel(pacfAcf: List[ArmaParameter], ts: Array[Double]): List[List[Double]] = {
+  def createModel(pacfAcf: List[ArmaParameter], ts: Array[Double]): Array[(String, List[Double])] = {
     val models = pacfAcf.map(e => {
       val arimaModel = createArima(e, ts)(0)
 //      val garchModel = createGarch(e, ts)
@@ -103,7 +102,9 @@ class Tsp {
       finalArray ::= List(smallest, biggest, sum/modelsLength)
     }
 
-    finalArray
+    val keyName = Array("min", "max", "avg")
+    val combine = keyName.zip(finalArray)
+    combine
   }
 
   def createArima(aramaParameter: ArmaParameter, ts: Array[Double]): List[UnivariateModel] = {
