@@ -1,0 +1,8 @@
+{
+  "topics":{
+    "system":"/SYSTEM",
+    "request":"/SYSTEM/JOB/REQ",
+    "response":"/SYSTEM/JOB/RES"
+  },
+  "broker":"ssl://140.119.19.100:8883"
+}
