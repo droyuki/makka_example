@@ -16,3 +16,8 @@ assemblyMergeStrategy in assembly := {
   case "reference.conf" => MergeStrategy.concat
   case _ => MergeStrategy.first
 }
+
+libraryDependencies += "org.rosuda.REngine" % "Rserve" % "1.8.1"
+libraryDependencies += "org.mongodb" % "mongo-java-driver" % "3.2.0"
+
+
