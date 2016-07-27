@@ -26,7 +26,7 @@ class TspJob extends Job {
     val requestId = ((request \ "requestId")).as[String]
 
     val fundsPrice = new MongoCasbah().query(portfolio_fundname, "fund20160414", "2010/01/01", "2014/12/31")
-    fundsPrice.par.map(e => {
+    fundsPrice.map(e => {
       val ts = e.toArray
       val tsp = new Tsp()
       val d = tsp.unitRootTest(ts) // diff number
