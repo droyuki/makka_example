@@ -1,0 +1,4 @@
+{
+  "topics":["/fund/portfolio/req","/fund/4433/req","/fund/saveportfolio/req","/fund/tsp/req"],
+  "broker":"ssl://140.119.19.100:8883"
+}
