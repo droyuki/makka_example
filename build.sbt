@@ -5,7 +5,7 @@ name := "test_microservice"
 version := "1.0"
 
 scalaVersion := "2.11.8"
-unmanagedJars in Compile += file("lib/microservice_scala.jar")
+unmanagedJars in Compile += file("lib/makka.jar")
 
 baseAssemblySettings
 assemblyMergeStrategy in assembly := {
